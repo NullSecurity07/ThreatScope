@@ -1,0 +1,29 @@
+# Virtual Environments
+venv/
+env/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Project Caches & Data
+.threatscope/
+.threatscope_data/
+.test_project/
+codebases/
+
+# Reports
+*_threatscope_report.html
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+.env.local
+*.env
+
+# Dependencies
+node_modules/

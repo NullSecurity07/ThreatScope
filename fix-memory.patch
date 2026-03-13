@@ -1,0 +1,19 @@
+--- main.py.orig2026-03-03 13:00:00.000000000 +0530
++++ main.py 2026-03-03 13:05:00.000000000 +0530
+@@ -166,6 +166,13 @@
+     crew = Crew(
+         agents=[summarizer, syntax_rev, logic_anal, orchestra],
+         tasks=[task1, task2, task3, task4],
++        memory=True,
++        embedder={
++            "provider": "ollama",
++            "config": {
++                "model": "nomic-embed-text"
++            }
++        },
+         process=Process.sequential,
+         verbose=args.verbose
+     )
+@@ -176,6 +183,11 @@
+         # Execute the crew
+         result = crew.kickoff()

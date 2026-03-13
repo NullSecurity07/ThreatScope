@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThreatScope AI - Codebase Review</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkblue: '#0F172A',
+                        cardbg: '#1E293B',
+                        accent: '#38BDF8'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0F172A;
+            color: #F8FAFC;
+        }
+
+        .critical {
+            border-left: 4px solid #EF4444;
+        }
+
+        .warning {
+            border-left: 4px solid #F59E0B;
+        }
+
+        .info {
+            border-left: 4px solid #3B82F6;
+        }
+
+        #history_data {
+            display: none;
+        }
+    </style>
+</head>
+
+<body class="font-sans antialiased">
+
+    <header class="bg-cardbg border-b border-gray-700 py-6 px-8 shadow-md">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex flex-col flex-1 w-full">
+                <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+                    <i class="fas fa-shield-alt text-accent"></i> ThreatScope Report
+                </h1>
+                <div class="flex items-center mt-3 gap-3 flex-wrap">
+                    <p class="text-gray-400">Targeting <span class="text-accent font-semibold">{{ target_folder
+                            }}</span></p>
+                    <span class="text-gray-600">|</span>
+                    <label for="versionSelect" class="text-gray-400 text-sm">Scan Version:</label>
+                    <select id="versionSelect"
+                        class="bg-gray-800 text-gray-300 text-sm rounded px-3 py-1.5 border border-gray-600 focus:outline-none focus:border-accent"
+                        onchange="renderVersion(this.value)">
+                        <option value="0" disabled>Loading History...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="text-right flex flex-col items-center">
+                <div id="healthScoreDisplay"
+                    class="text-6xl font-extrabold text-blue-400 drop-shadow-lg transition-colors duration-300">
+                    --
+                </div>
+                <div
+                    class="text-sm text-gray-400 uppercase tracking-widest mt-2 font-bold bg-gray-800 px-3 py-1 rounded shadow-inner">
+                    Health Score</div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto py-10 px-8 space-y-12">
+
+        <section class="bg-cardbg p-8 rounded-xl shadow-lg border border-gray-800">
+            <h2 class="text-2xl font-bold mb-4 border-b border-gray-700 pb-2 flex items-center text-gray-100"><i
+                    class="fas fa-chart-line text-accent mr-3"></i>Executive Summary</h2>
+            <div class="text-gray-400 mb-4 pb-2 text-sm italic">Status as of: <span id="timestampDisplay"
+                    class="text-gray-300 font-mono">{{ current_date }}</span></div>
+            <p id="execSummary"
+                class="text-gray-300 leading-relaxed text-lg bg-gray-800 p-5 rounded-lg border border-gray-700">{{
+                report.executive_summary }}</p>
+
+            <h3 class="text-xl font-bold mt-8 mb-3 text-accent flex items-center"><i
+                    class="fas fa-sitemap mr-3 text-gray-400"></i>Architecture Overview</h3>
+            <p id="archSummary"
+                class="text-gray-300 leading-relaxed p-4 bg-gray-800 rounded-lg border-l-2 border-accent">{{
+                report.architecture_summary }}</p>
+        </section>
+
+        <section class="bg-cardbg p-8 rounded-xl shadow-lg border border-gray-800">
+            <div class="flex justify-between items-center border-b border-gray-700 pb-2 mb-6">
+                <h2 class="text-2xl font-bold text-gray-100 flex items-center"><i
+                        class="fas fa-code text-accent mr-3"></i>Style, Consistency & Modularity</h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div
+                    class="p-5 bg-gray-800 rounded-xl flex flex-col justify-center border border-gray-700 shadow-inner">
+                    <h3 class="font-bold text-gray-200 mb-3 border-b border-gray-700 pb-2">Overall Consistency</h3>
+                    <p id="styleConsistency" class="text-gray-400 text-lg leading-relaxed">{{
+                        report.style_and_modularity.overall_style_consistency }}</p>
+                </div>
+                <div class="p-5 bg-gray-800 rounded-xl border border-gray-700 shadow-inner">
+                    <h3
+                        class="font-bold text-gray-200 mb-3 text-center border-b border-gray-700 pb-2 text-sm uppercase tracking-wider">
+                        Modularity Heatmap</h3>
+                    <div class="relative w-full" style="height: 220px;">
+                        <canvas id="modularityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="font-bold text-gray-200 mb-4 uppercase tracking-wider text-sm border-b border-gray-800 pb-1">
+                Individual File Reviews</h3>
+            <div id="reviewsContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <!-- Dynamically populated -->
+            </div>
+        </section>
+
+        <section class="bg-cardbg p-8 rounded-xl shadow-lg border-t-4 border-red-500 border border-gray-800">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3 border-b border-gray-700 pb-3">
+                <i class="fas fa-bug text-red-500"></i> Vulnerabilities & Logical Flaws
+            </h2>
+
+            <div id="flawsContainer" class="space-y-6">
+                <!-- Dynamically populated -->
+            </div>
+        </section>
+
+    </main>
+
+    <textarea id="history_data" aria-hidden="true">{{ history_json }}</textarea>
+
+    <script>
+        let historyData = [];
+        let modChart = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                historyData = JSON.parse(document.getElementById('history_data').value);
+            } catch (e) {
+                console.error("No history or invalid JSON.", e);
+                historyData = [];
+            }
+
+            if (!historyData || historyData.length === 0) {
+                return; // Fallback to raw Jinja
+            }
+
+            // Populate the dropdown
+            const select = document.getElementById('versionSelect');
+            select.innerHTML = '';
+            historyData.forEach((run, idx) => {
+                let dateStr = "Unknown Date";
+                if (run.timestamp) {
+                    const d = new Date(run.timestamp);
+                    dateStr = d.toLocaleString();
+                }
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.innerText = (idx === 0) ? `Latest Scan (${dateStr})` : `Previous - Version ${historyData.length - idx} (${dateStr})`;
+                if (idx === 0) opt.selected = true;
+                select.appendChild(opt);
+            });
+
+            // Initial render
+            renderVersion(0);
+        });
+
+        function renderVersion(index) {
+            const data = historyData[index];
+            if (!data) return;
+
+            // Health Score
+            const scoreDisplay = document.getElementById('healthScoreDisplay');
+            scoreDisplay.innerText = data.health_score;
+            scoreDisplay.className = `text-6xl font-extrabold drop-shadow-lg transition-colors duration-300 ${data.health_score >= 80 ? 'text-green-400' : (data.health_score >= 50 ? 'text-yellow-400' : 'text-red-400')}`;
+
+            // Summaries
+            if (data.timestamp) {
+                document.getElementById('timestampDisplay').innerText = new Date(data.timestamp).toLocaleString();
+            }
+            document.getElementById('execSummary').innerText = data.executive_summary;
+            document.getElementById('archSummary').innerText = data.architecture_summary;
+            document.getElementById('styleConsistency').innerText = data.style_and_modularity.overall_style_consistency;
+
+            // Flaws
+            const flawsContainer = document.getElementById('flawsContainer');
+            if (!data.key_vulnerabilities || data.key_vulnerabilities.length === 0) {
+                flawsContainer.innerHTML = `
+                    <div class="text-center py-10 text-gray-400 rounded-lg bg-gray-800 border p-6 border-dashed border-gray-600">
+                        <i class="fas fa-check-circle text-6xl text-green-500/80 mb-4 drop-shadow-md"></i>
+                        <p class="text-xl font-bold text-gray-200">Zero Critical Flaws Detected</p>
+                        <p class="mt-2 text-sm">The reasoning agents did not find any logical vulnerabilities in this version.</p>
+                    </div>`;
+            } else {
+                flawsContainer.innerHTML = data.key_vulnerabilities.map(flaw => {
+                    const sevLower = flaw.severity ? flaw.severity.toLowerCase() : 'info';
+                    const colorClass = sevLower === 'critical' ? 'critical bg-gray-800' : (sevLower === 'warning' ? 'warning bg-gray-800' : 'info bg-gray-800');
+                    const badgeClass = sevLower === 'critical' ? 'bg-red-900/40 text-red-400 border border-red-800' : (sevLower === 'warning' ? 'bg-yellow-900/40 text-yellow-400 border border-yellow-800' : 'bg-blue-900/40 text-blue-400 border border-blue-800');
+
+                    return `
+                    <div class="${colorClass} p-6 rounded-r-lg shadow-md hover:shadow-lg transition-shadow duration-200">
+                        <div class="flex justify-between items-start mb-4 border-b border-gray-700 pb-2">
+                            <h3 class="text-xl font-extrabold text-white flex items-center"><i class="fas fa-exclamation-triangle mr-3 text-red-500 opacity-80" style="display:${sevLower === 'critical' ? 'block' : 'none'}"></i>${flaw.title}</h3>
+                            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase ${badgeClass} shadow-inner">${flaw.severity}</span>
+                        </div>
+                        <p class="text-gray-300 mb-5 leading-relaxed bg-gray-900 p-4 rounded border border-gray-700">${flaw.description}</p>
+                        <div class="mb-5">
+                            <h4 class="text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest"><i class="fas fa-file-code mr-1"></i> Affected Surfaces</h4>
+                            <div class="flex flex-wrap gap-2 bg-gray-900 p-3 rounded border border-gray-700">
+                                ${(flaw.affected_files || []).map(f => `<span class="bg-gray-800 border border-gray-600 px-2 py-1 rounded text-xs font-mono text-accent break-all shadow-sm">${f}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div class="bg-emerald-900/20 border-l-4 border-emerald-500 p-4 rounded-r-md">
+                            <h4 class="text-sm font-bold text-emerald-400 mb-2 flex items-center gap-2 uppercase tracking-wide">
+                                <i class="fas fa-tools"></i> Verified Recommendation
+                            </h4>
+                            <p class="text-sm text-emerald-100/90 leading-relaxed">${flaw.recommendation}</p>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            // Reviews
+            const revContainer = document.getElementById('reviewsContainer');
+            if (!data.style_and_modularity.reviews || data.style_and_modularity.reviews.length === 0) {
+                revContainer.innerHTML = `<p class="text-gray-500 italic col-span-full">No specific file reviews available.</p>`;
+            } else {
+                revContainer.innerHTML = data.style_and_modularity.reviews.map(rev => {
+                    const sColor = rev.modularity_score >= 8 ? 'text-green-400 bg-green-900/30 border-green-800' : (rev.modularity_score >= 5 ? 'text-yellow-400 bg-yellow-900/30 border-yellow-800' : 'text-red-400 bg-red-900/30 border-red-800');
+                    const pathParts = rev.filepath.replace(/\\/g, '/').split('/');
+                    const shortFile = pathParts[pathParts.length - 1];
+                    const dirPath = pathParts.slice(0, -1).join('/');
+
+                    return `
+                    <div class="bg-gray-800 rounded-xl p-5 border border-gray-700 shadow flex flex-col justify-between hover:border-gray-500 transition-colors duration-200">
+                        <div>
+                            <div class="flex justify-between items-start mb-4 pb-2 border-b border-gray-700">
+                                <div class="truncate max-w-[80%]" title="${rev.filepath}">
+                                    <h4 class="font-mono text-sm font-bold text-accent">${shortFile}</h4>
+                                    ${dirPath ? `<p class="font-mono text-xs text-gray-500 mt-1 truncate">${dirPath}/</p>` : ''}
+                                </div>
+                                <span class="px-2 py-1 rounded text-xs font-bold border shadow-inner ${sColor}" title="Modularity Score">SCORE: ${rev.modularity_score}</span>
+                            </div>
+                            ${rev.style_issues ? `
+                            <div class="mb-3">
+                                <span class="text-xs font-bold text-gray-500 uppercase tracking-widest"><i class="fas fa-paint-brush mr-1"></i> Style</span>
+                                <p class="text-sm text-gray-300 mt-1 leading-snug">${rev.style_issues}</p>
+                            </div>` : ''}
+                        </div>
+                        <div class="pt-3 bg-gray-900/50 p-3 rounded mt-2 border border-gray-700/50">
+                            <span class="text-xs font-bold text-gray-500 uppercase tracking-widest"><i class="fas fa-cubes mr-1"></i> Modularity</span>
+                            <p class="text-sm text-gray-400 mt-1 leading-snug">${rev.modularity_feedback}</p>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            // Chart
+            const reviews = data.style_and_modularity.reviews || [];
+            // Remove full path and use just file name for labels
+            const labels = reviews.map(r => {
+                const p = r.filepath.replace(/\\/g, '/').split('/');
+                return p[p.length - 1];
+            });
+            const scores = reviews.map(r => r.modularity_score);
+
+            // Rich Gradients or Colors
+            const colors = scores.map(s => {
+                if (s >= 8) return 'rgba(74, 222, 128, 0.8)'; // Green
+                if (s >= 5) return 'rgba(251, 191, 36, 0.8)'; // Yellow
+                return 'rgba(248, 113, 113, 0.8)';           // Red
+            });
+
+            if (modChart) {
+                modChart.destroy();
+            }
+            const ctx = document.getElementById('modularityChart').getContext('2d');
+            modChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Modularity Score',
+                        data: scores,
+                        backgroundColor: colors,
+                        borderColor: colors.map(c => c.replace('0.8', '1')),
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        borderSkipped: false,
+                        barThickness: 'flex',
+                        maxBarThickness: 40
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 800,
+                        easing: 'easeOutQuart'
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 10,
+                            grid: { color: 'rgba(55, 65, 81, 0.5)', borderDash: [5, 5] },
+                            ticks: { color: '#9CA3AF', stepSize: 2, font: { family: 'monospace' } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: '#9CA3AF',
+                                maxRotation: 45,
+                                minRotation: 0,
+                                font: { family: 'monospace', size: 10 }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleColor: '#38BDF8',
+                            bodyColor: '#F8FAFC',
+                            borderColor: '#374151',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                label: function (context) { return 'Score: ' + context.parsed.y + '/10'; }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
