@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="assets/logo.png" alt="ThreatScope Logo" width="200" />
-  <h1>🛡️ ThreatScope</h1>
+  <img src="assets/logo.png" alt="ThreatScope Logo" width="400" />
+  <br/>
   <p><strong>A Privacy-First, Local Agentic AI Code Reviewer</strong></p>
 
   <p>
